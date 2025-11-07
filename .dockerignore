@@ -1,0 +1,41 @@
+# Ignorer les fichiers inutiles pour le build Docker
+
+# Git
+.git
+.gitignore
+
+# Maven
+target/surefire-reports
+target/maven-status
+target/maven-archiver
+target/classes
+target/test-classes
+
+# IDE
+.idea
+*.iml
+.vscode
+.settings
+.project
+.classpath
+
+# Base de données H2 locale
+*.mv.db
+*.trace.db
+*.lock.db
+
+# Logs
+*.log
+logs/
+
+# Jenkins
+.jenkins/
+
+# Documentation
+*.md
+!README.md
+
+# CI/CD configs
+.github/
+Jenkinsfile
+deploy-tomcat.bat

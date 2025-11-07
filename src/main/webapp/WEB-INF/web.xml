@@ -1,0 +1,32 @@
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee
+                             http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
+         version="4.0">
+  <display-name>TP Etudiants - Tomcat 9</display-name>
+
+  <!-- Listener pour initialiser les étudiants au démarrage -->
+  <listener>
+    <listener-class>ca.college.bdeb.tp.AppInitializer</listener-class>
+  </listener>
+
+  <!-- Servlet pour gérer les étudiants -->
+  <servlet>
+    <servlet-name>StudentServlet</servlet-name>
+    <servlet-class>ca.college.bdeb.tp.StudentServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>StudentServlet</servlet-name>
+    <url-pattern>/students</url-pattern>
+  </servlet-mapping>
+
+  <!-- Servlet pour exporter les données -->
+  <servlet>
+    <servlet-name>ExportServlet</servlet-name>
+    <servlet-class>ca.college.bdeb.tp.ExportServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>ExportServlet</servlet-name>
+    <url-pattern>/export</url-pattern>
+  </servlet-mapping>
+</web-app>

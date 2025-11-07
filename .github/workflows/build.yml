@@ -1,0 +1,193 @@
+name: Build and Package
+
+# Déclencheurs du workflow
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Permet de déclencher manuellement
+
+# Variables d'environnement
+env:
+  JAVA_VERSION: '17'
+  MAVEN_OPTS: -Dmaven.test.failure.ignore=true
+
+jobs:
+  build:
+    name: Build avec Maven
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: ☕ Configuration JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+      
+      - name: 🔍 Afficher versions
+        run: |
+          echo "Java version:"
+          java -version
+          echo "Maven version:"
+          mvn -version
+      
+      - name: 🧹 Clean
+        run: mvn clean
+      
+      - name: 🔨 Compilation
+        run: mvn compile
+      
+      - name: 🧪 Tests
+        run: mvn test
+        continue-on-error: true
+      
+      - name: 📦 Package WAR
+        run: mvn package -DskipTests
+      
+      - name: 📊 Analyse dépendances
+        run: |
+          mvn dependency:tree
+          mvn versions:display-dependency-updates || true
+        continue-on-error: true
+      
+      - name: 💾 Upload artifact WAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: tp-etudiants-war
+          path: target/*.war
+          retention-days: 30
+      
+      - name: 📝 Informations du build
+        run: |
+          echo "✅ Build terminé avec succès !"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Author: ${{ github.actor }}"
+          ls -lh target/*.war
+
+  # Job optionnel : Analyse de qualité
+  code-quality:
+    name: Analyse de qualité
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: ☕ Configuration JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+      
+      - name: 📊 Vérifier dépendances obsolètes
+        run: mvn versions:display-dependency-updates
+        continue-on-error: true
+      
+      - name: 🔍 Analyse du code
+        run: |
+          echo "Analyse statique du code..."
+          # Ajouter ici d'autres outils d'analyse (SonarQube, Checkstyle, etc.)
+          mvn site
+        continue-on-error: true
+
+  # Job : Build et Push Docker Image vers Docker Hub
+  docker:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Télécharger artifact WAR
+        uses: actions/download-artifact@v4
+        with:
+          name: tp-etudiants-war
+          path: target/
+      
+      - name: 🔐 Login Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: 🏷️ Extraire metadata Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/tp-etudiants
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ github.run_number }}
+      
+      - name: 🐳 Build et Push vers Docker Hub
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+      
+      - name: 📝 Informations Docker
+        run: |
+          echo "✅ Image Docker publiée avec succès !"
+          echo "🐳 Docker Hub: https://hub.docker.com/r/${{ secrets.DOCKERHUB_USERNAME }}/tp-etudiants"
+          echo "Tags publiés :"
+          echo "${{ steps.meta.outputs.tags }}" | sed 's/,/\n/g'
+          echo ""
+          echo "Pour tester l'image :"
+          echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/tp-etudiants:latest"
+          echo "docker run -d -p 8080:8080 ${{ secrets.DOCKERHUB_USERNAME }}/tp-etudiants:latest"
+
+  # Job optionnel : Notification de succès
+  notify:
+    name: Notification
+    runs-on: ubuntu-latest
+    needs: [build, code-quality, docker]
+    if: always()
+    
+    steps:
+      - name: 📢 Résumé du build
+        run: |
+          echo "========================================="
+          echo "RÉSUMÉ DU BUILD"
+          echo "========================================="
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Author: ${{ github.actor }}"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "========================================="
+          
+          if [ "${{ needs.build.result }}" == "success" ]; then
+            echo "✅ Build: SUCCESS"
+          else
+            echo "❌ Build: FAILED"
+          fi
+          
+          if [ "${{ needs.code-quality.result }}" == "success" ]; then
+            echo "✅ Quality: SUCCESS"
+          else
+            echo "⚠️ Quality: SKIPPED ou FAILED"
+          fi
+          
+          if [ "${{ needs.docker.result }}" == "success" ]; then
+            echo "✅ Docker: SUCCESS"
+          elif [ "${{ needs.docker.result }}" == "skipped" ]; then
+            echo "⏭️ Docker: SKIPPED (non-main branch)"
+          else
+            echo "❌ Docker: FAILED"
+          fi
