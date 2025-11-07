@@ -167,9 +167,9 @@ pipeline {
                     try {
                         // Credentials Docker Hub (à configurer dans Jenkins)
                         // Dashboard > Manage Jenkins > Manage Credentials > Add Credentials
-                        // ID: 'dockerhub-credentials'
+                        // ID: 'ef706bd3-a2ae-4156-8eda-67e338eaa0af'
                         withCredentials([usernamePassword(
-                            credentialsId: 'dockerhub-credentials',
+                            credentialsId: 'ef706bd3-a2ae-4156-8eda-67e338eaa0af',
                             usernameVariable: 'DOCKER_USER',
                             passwordVariable: 'DOCKER_PASS'
                         )]) {
