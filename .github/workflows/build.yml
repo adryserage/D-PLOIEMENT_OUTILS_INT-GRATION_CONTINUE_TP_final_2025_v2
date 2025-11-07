@@ -3,9 +3,9 @@ name: Build and Package
 # Déclencheurs du workflow
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master, main, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ master, main ]
   workflow_dispatch:  # Permet de déclencher manuellement
 
 # Variables d'environnement
@@ -103,7 +103,7 @@ jobs:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     
     steps:
       - name: 📥 Checkout du code
