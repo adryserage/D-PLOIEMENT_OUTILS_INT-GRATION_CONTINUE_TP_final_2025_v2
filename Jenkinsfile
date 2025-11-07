@@ -132,10 +132,7 @@ pipeline {
         
         stage('Deploy to Tomcat') {
             when {
-                anyOf {
-                    branch 'master'
-                    branch 'origin/master'
-                }
+                expression { env.GIT_BRANCH == 'origin/master' || env.GIT_BRANCH == 'master' }
             }
             steps {
                 echo '🚀 Déploiement automatique vers Tomcat local...'
@@ -162,10 +159,7 @@ pipeline {
         
         stage('Build & Push Docker Image') {
             when {
-                anyOf {
-                    branch 'master'
-                    branch 'origin/master'
-                }
+                expression { env.GIT_BRANCH == 'origin/master' || env.GIT_BRANCH == 'master' }
             }
             steps {
                 echo '🐳 Build et push de l\'image Docker vers Docker Hub...'
